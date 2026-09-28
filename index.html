@@ -225,35 +225,73 @@ function initLocation(){
 }
 
 /* ============================================================
-   WEATHER MODULE — [실제 API 연동 필요 지점]
-   claude.ai 게시 화면 자체는 외부 네트워크 요청이 막혀 있어 항상 데모로 동작합니다.
-   실시간 전환 방법은 이전 단계에서 드린 weather-proxy.js 참고.
+   WEATHER MODULE — Open-Meteo 실시간 날씨
+   GPS 좌표를 기준으로 현재 기온/날씨코드/강수량을 조회합니다.
    ============================================================ */
-const WEATHER_CONFIG = { mode:'demo', proxyUrl:'', provider:'openweathermap' };
+const WEATHER_CONFIG = {
+  mode:'live',
+  endpoint:'https://api.open-meteo.com/v1/forecast'
+};
 
-function getWeatherDemo(){
-  const conditions = ['맑음','흐림','비','눈'];
-  const seed = new Date().getDate();
-  const condition = conditions[seed % conditions.length];
-  const temp = 2 + (seed*7) % 30;
-  return { condition, temp, isRainOrSnow: condition==='비'||condition==='눈', isCold: temp<10, isHot: temp>=28, isClear: condition==='맑음' && temp>=10 && temp<28 };
+function weatherFromCode(code){
+  const c = Number(code);
+  if(c===0) return {condition:'맑음', emoji:'☀️'};
+  if([1,2].includes(c)) return {condition:'구름 조금', emoji:'🌤️'};
+  if(c===3) return {condition:'흐림', emoji:'☁️'};
+  if([45,48].includes(c)) return {condition:'안개', emoji:'🌫️'};
+  if([51,53,55,56,57].includes(c)) return {condition:'이슬비', emoji:'🌦️'};
+  if([61,63,65,66,67,80,81,82].includes(c)) return {condition:'비', emoji:'🌧️'};
+  if([71,73,75,77,85,86].includes(c)) return {condition:'눈', emoji:'❄️'};
+  if([95,96,99].includes(c)) return {condition:'천둥번개', emoji:'⛈️'};
+  return {condition:'흐림', emoji:'☁️'};
 }
+
 async function fetchWeather(lat, lng){
-  if(WEATHER_CONFIG.mode==='live' && WEATHER_CONFIG.proxyUrl){
-    try{
-      const res = await fetch(`${WEATHER_CONFIG.proxyUrl}?lat=${lat}&lon=${lng}`);
-      if(!res.ok) throw new Error('proxy response not ok');
-      return { ...(await res.json()), isDemo:false };
-    }catch(e){ console.warn('실시간 날씨 연결 실패, 데모로 대체합니다.', e); }
-  }
-  return { ...getWeatherDemo(), isDemo:true };
+  const url = `${WEATHER_CONFIG.endpoint}?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lng)}&current=temperature_2m,apparent_temperature,precipitation,rain,showers,snowfall,weather_code&timezone=Asia%2FSeoul`;
+  const res = await fetch(url, {headers:{'Accept':'application/json'}});
+  if(!res.ok) throw new Error(`weather api ${res.status}`);
+  const data = await res.json();
+  if(!data.current) throw new Error('current weather missing');
+
+  const current = data.current;
+  const info = weatherFromCode(current.weather_code);
+  const temp = Math.round(Number(current.temperature_2m));
+  const apparentTemp = Number.isFinite(Number(current.apparent_temperature)) ? Math.round(Number(current.apparent_temperature)) : temp;
+  const precipitation = Number(current.precipitation || 0);
+  const rain = Number(current.rain || 0);
+  const showers = Number(current.showers || 0);
+  const snowfall = Number(current.snowfall || 0);
+  const isRainOrSnow = ['비','눈','이슬비'].includes(info.condition) || precipitation > 0 || rain > 0 || showers > 0 || snowfall > 0;
+
+  return {
+    condition:info.condition,
+    emoji:info.emoji,
+    temp,
+    apparentTemp,
+    precipitation,
+    isRainOrSnow,
+    isCold:temp < 10,
+    isHot:temp >= 28,
+    isClear:(current.weather_code===0 || current.weather_code===1) && temp>=10 && temp<28,
+    isDemo:false,
+    source:'Open-Meteo'
+  };
 }
+
 async function initWeather(){
-  state.weather = await fetchWeather(state.userLoc.lat, state.userLoc.lng);
-  const emojiMap = {'맑음':'☀️','흐림':'☁️','비':'🌧️','눈':'❄️'};
-  const demoTag = state.weather.isDemo ? ' <span style="opacity:.6;font-weight:400;">(데모)</span>' : '';
-  document.getElementById('weatherText').innerHTML = `<span class="weather-emoji">${emojiMap[state.weather.condition]}</span>${state.weather.condition} ${state.weather.temp}°C${demoTag}`;
-  document.documentElement.setAttribute('data-weather', state.weather.isHot ? 'hot':'default');
+  const el = document.getElementById('weatherText');
+  try{
+    state.weather = await fetchWeather(state.userLoc.lat, state.userLoc.lng);
+    const w = state.weather;
+    el.innerHTML = `<span class="weather-emoji">${w.emoji}</span>${w.condition} ${w.temp}°C`;
+    el.title = `현재 ${w.temp}°C · 체감 ${w.apparentTemp}°C · ${w.source}`;
+    document.documentElement.setAttribute('data-weather', w.isHot ? 'hot':'default');
+  }catch(e){
+    console.warn('실시간 날씨 연결 실패', e);
+    state.weather = {condition:'날씨 확인 실패', emoji:'⚠️', temp:20, apparentTemp:20, precipitation:0, isRainOrSnow:false, isCold:false, isHot:false, isClear:false, isDemo:true};
+    el.innerHTML = '<span class="weather-emoji">⚠️</span>날씨 확인 실패';
+    document.documentElement.setAttribute('data-weather','default');
+  }
 }
 
 /* ============================================================
