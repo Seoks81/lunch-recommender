@@ -218,7 +218,7 @@ function initLocation(){
   if(!navigator.geolocation){ handleLocationUnavailable('위치 미지원'); return; }
   navigator.geolocation.getCurrentPosition(
     pos=>{ state.userLoc = {lat:pos.coords.latitude, lng:pos.coords.longitude};
-      locText.textContent = `위도 ${state.userLoc.lat.toFixed(3)}, 경도 ${state.userLoc.lng.toFixed(3)} (실제 GPS)`; afterLocationReady(); },
+      locText.textContent = '현재 위치 사용 중 · GPS'; afterLocationReady(); },
     ()=>{ handleLocationUnavailable('위치 권한 거부됨'); },
     {timeout:6000}
   );
