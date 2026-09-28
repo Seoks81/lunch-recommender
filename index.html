@@ -100,7 +100,7 @@
 
   <div id="resultArea"></div>
 
-  <div class="footer-note">이 화면의 식당명·주소·평점·리뷰수·노출량 정보는 전부 예시 데이터입니다</div>
+  <div class="footer-note">식당명·주소는 카카오 Local API 검색 결과이며, 평점·리뷰수 등 제공되지 않는 정보는 별도로 추정하지 않습니다</div>
 </div>
 
 <script>
@@ -122,10 +122,10 @@ const PURPOSE_OPTIONS = [
 const FOOD_CATEGORIES = ['전체','한식','중식','일식','양식','분식','국밥','찌개/전골','고기','면','돈까스','초밥/회','카페/브런치','기타'];
 
 // 'demo' = 기존 가짜 18곳 데이터, 'kakao' = 카카오 Local API 실제 검색. 여기서만 바꾸면 됨.
-const DATA_SOURCE = 'demo';
+const DATA_SOURCE = 'kakao';
 const KAKAO_CONFIG = {
-  restApiKey: '',                                   // 절대 실제 키를 여기 하드코딩하지 말 것 (아래 설명 참고)
-  baseUrl: 'https://dapi.kakao.com/v2/local/search',
+  // 실제 키는 Vercel 환경변수 KAKAO_REST_API_KEY에서만 사용합니다.
+  proxyUrl: '/api/kakao',
   categoryGroupCode: 'FD6',                          // 음식점 카테고리 그룹
   radiusMeters: 20000,                               // 카카오 API 문서상 반경 최대치(20km) — 30분 차량 이동범위를 넉넉히 커버
   pageSize: 15,                                      // 카카오 1페이지 최대 문서 수
@@ -347,13 +347,13 @@ function generateMockRestaurants(center){
    여기서는 실제 호출을 시도해도 항상 네트워크 오류로 처리됩니다. 별도 호스팅 + 키 설정이 필요합니다.
    ============================================================ */
 function classifyKakaoError(res){
-  if(!KAKAO_CONFIG.restApiKey) return {type:'no-api-key', message:'카카오 REST API 키가 설정되지 않았습니다.'};
   if(res){
-    if(res.status===401) return {type:'auth-failed', message:'카카오 API 인증에 실패했습니다. (키가 잘못됐거나 만료됨)'};
+    if(res.status===401) return {type:'auth-failed', message:'카카오 API 인증에 실패했습니다. Vercel 환경변수의 키를 확인해주세요.'};
     if(res.status===429) return {type:'rate-limited', message:'카카오 API 호출 한도를 초과했습니다.'};
+    if(res.status===400) return {type:'bad-request', message:'카카오 API 요청 형식이 잘못되었습니다.'};
     return {type:'http-error', message:`카카오 API 오류 (status ${res.status})`};
   }
-  return {type:'network-or-cors', message:'네트워크 오류 또는 브라우저 보안 정책(CORS/CSP)으로 요청이 차단됐습니다.'};
+  return {type:'network-error', message:'점메추 서버와 통신하지 못했습니다.'};
 }
 
 async function fetchKakaoPage(location, filters, page){
@@ -362,17 +362,17 @@ async function fetchKakaoPage(location, filters, page){
     radius:String(KAKAO_CONFIG.radiusMeters), page:String(page), size:String(KAKAO_CONFIG.pageSize), sort:'distance'
   });
   const keyword = FOOD_CATEGORY_KEYWORD_MAP[filters.category] || '';
-  let url;
-  if(keyword){ params.set('query', keyword); url = `${KAKAO_CONFIG.baseUrl}/keyword.json?${params.toString()}`; }
-  else { params.set('category_group_code', KAKAO_CONFIG.categoryGroupCode); url = `${KAKAO_CONFIG.baseUrl}/category.json?${params.toString()}`; }
-  const res = await fetch(url, { headers:{ Authorization:`KakaoAK ${KAKAO_CONFIG.restApiKey}` } });
+  if(keyword) params.set('query', keyword);
+  else params.set('category_group_code', KAKAO_CONFIG.categoryGroupCode);
+  const endpoint = keyword ? 'keyword' : 'category';
+  params.set('endpoint', endpoint);
+  const res = await fetch(`${KAKAO_CONFIG.proxyUrl}?${params.toString()}`);
   if(!res.ok) throw classifyKakaoError(res);
   return res.json();
 }
 
 async function fetchRestaurantsFromKakao(location, filters){
   if(!location) throw {type:'no-location', message:'현재 위치가 없어 검색할 수 없습니다.'};
-  if(!KAKAO_CONFIG.restApiKey) throw {type:'no-api-key', message:'카카오 REST API 키가 설정되지 않았습니다.'};
   let all = [];
   try{
     for(let page=1; page<=KAKAO_CONFIG.maxPages; page++){
@@ -381,8 +381,8 @@ async function fetchRestaurantsFromKakao(location, filters){
       if(!data.meta || data.meta.is_end || all.length>=KAKAO_CONFIG.maxResults) break;
     }
   } catch(err){
-    if(err && err.type) throw err;             // 이미 분류된 에러(위에서 throw classifyKakaoError(res))
-    throw classifyKakaoError(null);             // fetch 자체가 실패(네트워크/CORS/CSP)
+    if(err && err.type) throw err;
+    throw classifyKakaoError(null);
   }
   if(all.length===0) throw {type:'no-results', message:'주변에서 식당을 찾지 못했습니다.'};
   return all.slice(0, KAKAO_CONFIG.maxResults);
@@ -488,12 +488,13 @@ function diminishing(count, cap){ return count<=0 ? 0 : Math.min(100, (Math.log(
 // 신뢰도 = 평점 + 리뷰수(로그, diminishing) + 블로그노출 + 유튜브노출. 인스타/재방문비율은 API로 안정 확보 불가해 제외.
 function calculateTrustScore(r){
   const w = TRUST_CONFIG.weights;
-  const ratingScore = (r.rating/5)*100;
-  const reviewScore = diminishing(r.reviewCount, TRUST_CONFIG.reviewCountCap);
-  const blogScore = diminishing(r.blogMentionCount, TRUST_CONFIG.blogCountCap);
-  const youtubeScore = diminishing(r.youtubeMentionCount, TRUST_CONFIG.youtubeCountCap);
+  const ratingScore = Number.isFinite(r.rating) ? (r.rating/5)*100 : 50;
+  const reviewScore = Number.isFinite(r.reviewCount) ? diminishing(r.reviewCount, TRUST_CONFIG.reviewCountCap) : 50;
+  const blogScore = Number.isFinite(r.blogMentionCount) ? diminishing(r.blogMentionCount, TRUST_CONFIG.blogCountCap) : 50;
+  const youtubeScore = Number.isFinite(r.youtubeMentionCount) ? diminishing(r.youtubeMentionCount, TRUST_CONFIG.youtubeCountCap) : 50;
   const generalScore = ratingScore*w.rating + reviewScore*w.reviewCount + blogScore*w.blog + youtubeScore*w.youtube;
-  const verified = r.reviewCount>=TRUST_CONFIG.verifiedCriteria.minReviewCount && r.rating>=TRUST_CONFIG.verifiedCriteria.minRating;
+  const verified = Number.isFinite(r.reviewCount) && Number.isFinite(r.rating) &&
+    r.reviewCount>=TRUST_CONFIG.verifiedCriteria.minReviewCount && r.rating>=TRUST_CONFIG.verifiedCriteria.minRating;
   return { generalScore, verified };
 }
 
@@ -753,7 +754,9 @@ function parkingLabel(p){ return p.ownParking ? '자체 주차장 있음' : p.ne
 function buildReason(r, score, weather, mode){
   const parts = [];
   parts.push(`차량 기준 약 ${r.travelTime}분 거리(${r.distance}km)입니다.`);
-  parts.push(`평점 ${r.rating} · 리뷰 ${r.reviewCount.toLocaleString()}건으로 신뢰도가 ${score.trustFinal>=65?'높은':'무난한'} 편이에요.`);
+  const ratingText = Number.isFinite(r.rating) ? r.rating.toFixed(1) : '미확인';
+  const reviewText = Number.isFinite(r.reviewCount) ? `${r.reviewCount.toLocaleString()}건` : '미확인';
+  parts.push(`평점 ${ratingText} · 리뷰 ${reviewText}으로 현재 확인 가능한 정보 기준 신뢰도를 반영했어요.`);
   if(score.weatherFit.reason==='cold') parts.push('쌀쌀한 날씨라 따뜻한 메뉴에 가산점을 줬어요.');
   if(score.weatherFit.reason==='hot') parts.push('더운 날이라 시원한 메뉴에 가산점을 줬어요.');
   if(weather.isRainOrSnow) parts.push('비/눈 예보라 이동시간이 짧은 곳을 더 우선했어요.');
