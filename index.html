@@ -4,78 +4,60 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>오늘 점메추</title>
+
 <style>
-  :root{
-    --bg:#faf7f2; --card:#ffffff; --text:#2a2622;
-    --sub-text:#6b6258; --line:#e8e2d8; --accent:#c9762c; --accent-soft:#f3e2cf;
-    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
-  }
-  html{scroll-padding-top:env(safe-area-inset-top,0px);}
-  [data-weather="hot"]{ --accent:#1f8a82; --accent-soft:#d9efec; }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){ --bg:#1c1a17; --card:#262320; --text:#efe9e0; --sub-text:#a89e91; --line:#3a352f; --accent-soft:#3a2c1c; }
-    [data-weather="hot"]:not([data-theme="light"]){ --accent-soft:#173634; }
-  }
-  :root[data-theme="dark"]{ --bg:#1c1a17; --card:#262320; --text:#efe9e0; --sub-text:#a89e91; --line:#3a352f; --accent-soft:#3a2c1c; }
-  *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{margin:0; background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; line-height:1.5;}
-  .wrap{max-width:480px;margin:0 auto;padding:20px 18px 48px;}
-  .banner{background:var(--accent-soft); border-radius:14px; padding:10px 14px; font-size:12.5px; color:var(--sub-text); margin-bottom:14px;}
-  .status{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 20px; margin-bottom:14px;}
-  .status-row{display:flex; justify-content:space-between; align-items:center; padding:6px 0;}
-  .status-label{font-size:13px; color:var(--sub-text);}
-  .status-value{font-size:15px; font-weight:600;}
-  .weather-emoji{font-size:20px; margin-right:4px;}
-  .cond-card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 20px; margin-bottom:14px;}
-  .cond-summary{display:flex; flex-wrap:wrap; gap:8px;}
-  .cond-chip{font-size:12.5px; background:var(--accent-soft); padding:6px 10px; border-radius:999px;}
-  .toggle-btn{width:100%; margin-top:12px; padding:10px; border-radius:12px; border:1px solid var(--line); background:transparent; color:var(--text); font-size:13.5px; font-weight:600; cursor:pointer;}
-  .settings-body.hidden{display:none;}
-  .settings-body{margin-top:14px;}
-  .settings-label{font-size:13px; color:var(--sub-text); margin-bottom:6px; display:block;}
-  .select-row{display:flex; gap:8px; margin-bottom:12px;}
-  select{flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:14px;}
-  .chip-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;}
-  .chip{flex:0 0 auto; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:13.5px; cursor:pointer; white-space:nowrap;}
-  .chip.active{background:var(--accent); color:#fff; border-color:var(--accent);}
-  .cta{width:100%; padding:20px; margin-top:2px; border:none; border-radius:18px; background:var(--accent); color:#fff; font-size:19px; font-weight:700; cursor:pointer; transition:transform .12s ease, opacity .12s ease;}
-  .cta:active{transform:scale(0.98);}
-  .cta:disabled{opacity:.55; cursor:default;}
-  .cta:focus-visible, .icon-link:focus-visible, .retry:focus-visible, select:focus-visible, .chip:focus-visible, .toggle-btn:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
-  .section-title{font-size:15px; font-weight:700; margin:20px 0 4px;}
-  .result-card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 20px; margin-top:14px; animation:rise .25s ease;}
-  @media (prefers-reduced-motion: reduce){ .result-card{animation:none;} }
-  @keyframes rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
-  .r-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
-  .r-name{font-size:18px; font-weight:700;}
-  .mode-badge{font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:6px; vertical-align:middle;}
-  .mode-badge.stable{background:var(--accent-soft); color:var(--text);}
-  .mode-badge.new{background:var(--accent); color:#fff;}
-  .r-eta{font-size:13px; color:var(--accent); font-weight:700; white-space:nowrap;}
-  .r-category{font-size:14px; color:var(--sub-text); margin-top:2px;}
-  .r-address{font-size:12.5px; color:var(--sub-text); margin-top:4px;}
-  .r-ratings{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
-  .badge{font-size:12.5px; background:var(--accent-soft); color:var(--text); padding:4px 10px; border-radius:999px;}
-  .badge.warn{background:transparent; border:1px solid var(--line);}
-  .r-reason{font-size:13.5px; color:var(--sub-text); margin-top:12px; line-height:1.55; border-top:1px solid var(--line); padding-top:10px;}
-  .r-links{display:flex; gap:8px; margin-top:12px;}
-  .icon-link{flex:1; text-align:center; padding:10px; border-radius:12px; text-decoration:none; font-size:13.5px; font-weight:600; border:1px solid var(--line); color:var(--text);}
-  .icon-link.disabled{opacity:.45; pointer-events:none;}
-  .result-actions{display:flex; gap:8px; margin-top:16px;}
-  .retry{flex:1; padding:14px; border-radius:14px; border:1px solid var(--line); background:transparent; color:var(--text); font-size:15px; font-weight:600; cursor:pointer;}
-  .reset{flex:0 0 auto; padding:14px 16px; border-radius:14px; border:1px solid var(--line); background:transparent; color:var(--sub-text); font-size:14px; cursor:pointer;}
-  .empty-note{font-size:12.5px; color:var(--sub-text); text-align:center; margin-top:10px;}
-  .footer-note{margin-top:28px; font-size:12px; color:var(--sub-text); text-align:center;}
-  .debug-details{margin-top:10px; font-size:12px;}
-  .debug-details summary{cursor:pointer; color:var(--sub-text);}
-  .debug-line{display:flex; justify-content:space-between; padding:2px 0; color:var(--sub-text);}
-  .debug-total{font-weight:700; color:var(--text); border-top:1px solid var(--line); margin-top:4px; padding-top:4px;}
+:root{
+  --bg:#f6f3ec; --card:#fffdf9; --card-strong:#ffffff; --text:#292a27; --sub:#73766f;
+  --line:#e7e2d8; --accent:#287a5b; --accent-dark:#1f6349; --accent-soft:#e5f1eb;
+  --warm:#f3a85b; --warm-soft:#fff0dc; --warn:#9b5d22; --shadow:0 8px 24px rgba(38,42,35,.07);
+  --radius:22px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;scroll-padding-top:20px}
+body{margin:0;background:linear-gradient(180deg,#fbfaf6 0%,var(--bg) 48%,#f4f0e7 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.5}
+button,select{font:inherit}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px 52px}
+.hero{padding:10px 4px 18px}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--accent);margin-bottom:4px}
+.hero-title{margin:0;font-size:28px;line-height:1.18;letter-spacing:-.04em}
+.hero-sub{margin:6px 0 0;color:var(--sub);font-size:14px}
+.banner{display:flex;align-items:center;gap:8px;background:var(--accent-soft);border:1px solid #d5e7dd;border-radius:14px;padding:10px 13px;font-size:12.5px;color:#466355;margin-bottom:12px}
+.status{background:var(--card-strong);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.status-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0}.status-row+.status-row{margin-top:4px;padding-top:12px;border-top:1px solid #eee9df}
+.status-label{font-size:12.5px;color:var(--sub)}.status-value{font-size:14px;font-weight:800;text-align:right}.weather-emoji{font-size:19px;margin-right:4px}
+.cond-card{background:var(--card-strong);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;margin-bottom:13px;box-shadow:var(--shadow)}
+.cond-summary{display:flex;flex-wrap:wrap;gap:7px}.cond-chip{font-size:12px;font-weight:700;background:#f3f5f1;color:#4d554f;padding:7px 10px;border-radius:999px;border:1px solid #e7ebe5}
+.cond-chip:first-child{background:var(--accent-soft);color:var(--accent-dark);border-color:#d2e7dc}
+.toggle-btn{width:100%;margin-top:13px;padding:11px;border-radius:14px;border:1px solid var(--line);background:#fbfaf7;color:var(--text);font-size:13px;font-weight:800;cursor:pointer}
+.settings-body.hidden{display:none}.settings-body{margin-top:15px}.settings-label{font-size:12px;color:var(--sub);margin:0 0 6px;display:block;font-weight:700}
+.select-row{display:flex;gap:8px;margin-bottom:12px}select{flex:1;min-width:0;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:#fbfaf7;color:var(--text);font-size:13px}
+.chip-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:5px;margin-bottom:4px;scrollbar-width:none}.chip-row::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:12.5px;cursor:pointer;white-space:nowrap}.chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cta{width:100%;padding:18px;margin:3px 0 4px;border:0;border-radius:19px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;font-size:18px;font-weight:900;letter-spacing:-.02em;box-shadow:0 10px 22px rgba(40,122,91,.20);cursor:pointer;transition:transform .12s ease,filter .12s ease}.cta:active{transform:scale(.985)}.cta:disabled{opacity:.55;cursor:default;box-shadow:none}
+.cta:focus-visible,.icon-link:focus-visible,.retry:focus-visible,select:focus-visible,.chip:focus-visible,.toggle-btn:focus-visible{outline:3px solid #9bc9b4;outline-offset:2px}
+.section-title{display:flex;align-items:center;gap:7px;font-size:17px;font-weight:900;margin:25px 2px 7px;letter-spacing:-.03em}.section-title:before{content:"";width:5px;height:19px;border-radius:5px;background:var(--accent)}
+.result-card{background:var(--card-strong);border:1px solid var(--line);border-radius:24px;padding:19px 18px;margin-top:12px;box-shadow:var(--shadow);animation:rise .25s ease}
+@media(prefers-reduced-motion:reduce){.result-card{animation:none}}@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.r-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.r-name{font-size:21px;font-weight:900;letter-spacing:-.04em;line-height:1.2}.r-eta{font-size:12px;color:var(--accent);font-weight:900;white-space:nowrap;padding-top:2px}
+.mode-badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:900;padding:4px 7px;border-radius:999px;margin-left:6px;vertical-align:3px}.mode-badge.stable{background:var(--accent-soft);color:var(--accent-dark)}.mode-badge.new{background:var(--warm-soft);color:var(--warn)}.mode-badge.limited{background:#f0eee9;color:#68665e}
+.r-category{font-size:13px;color:var(--sub);margin-top:5px}.r-address{font-size:12px;color:var(--sub);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-ratings{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}.badge{font-size:11.5px;font-weight:700;background:#f4f5f2;color:#50564f;padding:6px 9px;border-radius:999px;border:1px solid #e8ebe6}.badge.warn{background:#fff8ed;color:#8b602e;border-color:#f1dfc2}
+.r-reason{font-size:13px;color:#5e625c;margin-top:13px;line-height:1.65;border-top:1px solid #eee9df;padding-top:12px}.r-reason strong{color:var(--text)}
+.r-links{display:flex;gap:8px;margin-top:13px}.icon-link{flex:1;text-align:center;padding:10px;border-radius:13px;text-decoration:none;font-size:12.5px;font-weight:800;border:1px solid var(--line);background:#fbfaf7;color:var(--text)}.icon-link.disabled{opacity:.45;pointer-events:none}
+.result-actions{display:flex;gap:8px;margin-top:14px}.retry{flex:1;padding:13px;border-radius:14px;border:1px solid #cfe1d8;background:var(--accent-soft);color:var(--accent-dark);font-size:14px;font-weight:900;cursor:pointer}.reset{flex:0 0 auto;padding:13px 15px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--sub);font-size:13px;cursor:pointer}
+.empty-note{font-size:12px;color:var(--sub);text-align:center;margin-top:10px;line-height:1.55}.footer-note{margin-top:25px;font-size:11.5px;color:var(--sub);text-align:center;line-height:1.55;padding:0 8px}
+.debug-details{margin-top:10px;font-size:11px}.debug-details summary{cursor:pointer;color:#85877f}.debug-line{display:flex;justify-content:space-between;padding:2px 0;color:#85877f}.debug-total{font-weight:800;color:var(--text);border-top:1px solid var(--line);margin-top:4px;padding-top:5px}
+.confidence-note{margin-top:10px;padding:10px 11px;border-radius:13px;background:#fff8ed;border:1px solid #f0dfc5;color:#7b613d;font-size:11.5px;line-height:1.55}.confidence-note b{color:#65491f}
+@media(max-width:360px){.wrap{padding-left:12px;padding-right:12px}.hero-title{font-size:25px}.r-name{font-size:19px}.r-top{gap:6px}.r-eta{font-size:11px}}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">LUNCH PICKER</div>
+    <h1 class="hero-title">오늘 뭐 먹지?</h1>
+    <p class="hero-sub">지금 조건에 맞춰 실패 확률을 낮춘 점심을 골라줄게.</p>
+  </header>
   <div class="banner" id="banner">🧪 DEMO 모드로 시작 중입니다...</div>
 
   <div class="status">
@@ -96,11 +78,11 @@
     </div>
   </div>
 
-  <button class="cta" id="ctaBtn" disabled>위치 확인 중...</button>
+  <button class="cta" id="ctaBtn" disabled>🍚 오늘 점메추!</button>
 
   <div id="resultArea"></div>
 
-  <div class="footer-note">식당명·주소는 카카오 Local API 검색 결과이며, 평점·리뷰수 등 제공되지 않는 정보는 별도로 추정하지 않습니다</div>
+  <div class="footer-note">식당명·주소는 카카오 Local API 검색 결과이며, 평점·리뷰·가격·주차·영업시간 등 제공되지 않는 정보는 추정하지 않습니다</div>
 </div>
 
 <script>
@@ -157,7 +139,10 @@ const MENU_REPEAT_CONFIG = {
 const TRUST_CONFIG = {
   reviewCountCap:3000, blogCountCap:200, youtubeCountCap:50,
   weights:{ rating:0.45, reviewCount:0.25, blog:0.15, youtube:0.15 }, // 합=1
-  verifiedCriteria:{ minReviewCount:700, minRating:4.3 }
+  verifiedCriteria:{ minReviewCount:700, minRating:4.3 },
+  // 안정형은 신뢰도 데이터를 실제로 확인할 수 있는 식당만 허용한다.
+  // 카카오 Local 단독 데이터처럼 평점/리뷰 등이 전부 null이면 안정형으로 분류하지 않는다.
+  stableRequiresData:true
 };
 // 개인 방문평가가 일반 신뢰도를 얼마나 덮어쓸지 — 방문 횟수가 쌓일수록 점진적으로 커짐
 const PERSONAL_OVERRIDE_BY_VISIT = { 1:0.2, 2:0.3, 3:0.4, 4:0.5, 5:0.5, 6:0.6 }; // 6회 이상은 마지막 값(0.6) 유지
@@ -493,14 +478,20 @@ function diminishing(count, cap){ return count<=0 ? 0 : Math.min(100, (Math.log(
 // 신뢰도 = 평점 + 리뷰수(로그, diminishing) + 블로그노출 + 유튜브노출. 인스타/재방문비율은 API로 안정 확보 불가해 제외.
 function calculateTrustScore(r){
   const w = TRUST_CONFIG.weights;
-  const ratingScore = Number.isFinite(r.rating) ? (r.rating/5)*100 : 50;
-  const reviewScore = Number.isFinite(r.reviewCount) ? diminishing(r.reviewCount, TRUST_CONFIG.reviewCountCap) : 50;
-  const blogScore = Number.isFinite(r.blogMentionCount) ? diminishing(r.blogMentionCount, TRUST_CONFIG.blogCountCap) : 50;
-  const youtubeScore = Number.isFinite(r.youtubeMentionCount) ? diminishing(r.youtubeMentionCount, TRUST_CONFIG.youtubeCountCap) : 50;
+  const hasRating = Number.isFinite(r.rating);
+  const hasReviewCount = Number.isFinite(r.reviewCount);
+  const hasBlog = Number.isFinite(r.blogMentionCount);
+  const hasYoutube = Number.isFinite(r.youtubeMentionCount);
+  const knownSignals = [hasRating,hasReviewCount,hasBlog,hasYoutube].filter(Boolean).length;
+  const dataSufficient = hasRating && hasReviewCount;
+  const ratingScore = hasRating ? (r.rating/5)*100 : 50;
+  const reviewScore = hasReviewCount ? diminishing(r.reviewCount, TRUST_CONFIG.reviewCountCap) : 50;
+  const blogScore = hasBlog ? diminishing(r.blogMentionCount, TRUST_CONFIG.blogCountCap) : 50;
+  const youtubeScore = hasYoutube ? diminishing(r.youtubeMentionCount, TRUST_CONFIG.youtubeCountCap) : 50;
   const generalScore = ratingScore*w.rating + reviewScore*w.reviewCount + blogScore*w.blog + youtubeScore*w.youtube;
-  const verified = Number.isFinite(r.reviewCount) && Number.isFinite(r.rating) &&
-    r.reviewCount>=TRUST_CONFIG.verifiedCriteria.minReviewCount && r.rating>=TRUST_CONFIG.verifiedCriteria.minRating;
-  return { generalScore, verified };
+  const verified = dataSufficient && r.reviewCount>=TRUST_CONFIG.verifiedCriteria.minReviewCount && r.rating>=TRUST_CONFIG.verifiedCriteria.minRating;
+  const stableEligible = TRUST_CONFIG.stableRequiresData ? dataSufficient && generalScore>=EXPLORATION_CONFIG.stableTrustThreshold : generalScore>=EXPLORATION_CONFIG.stableTrustThreshold;
+  return { generalScore, verified, dataSufficient, knownSignals, stableEligible };
 }
 
 // 개인화 점수: 직접 남긴 방문평가가 있으면 그걸 최우선, 없으면 좋아하는/싫어하는 음식종류로 소폭 가감
@@ -666,17 +657,19 @@ function recommendRestaurants(restaurants, context){
   if(pool.length < 1){ sessionExcludedIds.clear(); recycled = true; pool = buildPool(sessionExcludedIds); }
   pool.sort((a,b)=>b.score.total - a.score.total);
 
-  const stablePool = pool.filter(c=>c.score.trustFinal>=EXPLORATION_CONFIG.stableTrustThreshold);
+  const stablePool = pool.filter(c=>c.score.trust.stableEligible);
 
   const finish = (picks, fallbackReason)=>{
-    state.recommendationModeHistory.push(picks.some(p=>p.mode==='new') ? 'exploration' : 'stable');
+    if(picks.some(p=>p.mode==='new')) state.recommendationModeHistory.push('exploration');
+    else if(picks.some(p=>p.mode==='stable')) state.recommendationModeHistory.push('stable');
     return { picks, recycled, fallbackReason };
   };
 
-  // A. 안정형 후보(trustFinal>=65) 자체가 없으면 탐색형 분기를 시도하지 않고,
-  //    낮은 신뢰도 식당을 "안정형"으로 포장하지 않는다 — 전체 후보 중 최선을 그대로 보여줌
+  // 안정형 데이터가 없으면 '안정형'으로 포장하지 않는다.
+  // 카카오 Local 단독 데이터에서는 평점/리뷰가 제공되지 않으므로 거리·날씨·메뉴중복 등
+  // 현재 확인 가능한 정보만으로 추천하고 화면에 정보 부족 상태를 명시한다.
   if(stablePool.length===0){
-    const picks = pickDistinctPair(pool).map(c=>({...c, mode:'stable', displayTotal:c.score.total}));
+    const picks = pickDistinctPair(pool).map((c,i)=>({...c, mode:'limited', displayTotal:c.score.total, limitedReason:'trust-data-unavailable'}));
     return finish(picks, 'no-stable-pool');
   }
 
@@ -685,7 +678,7 @@ function recommendRestaurants(restaurants, context){
     // 신규 식당 조건: 최소 신뢰도 30, 안정형 기준(65) 미만, 전체 추천 이력에 없음,
     // 현재 세션에서 이미 추천 안 함(=pool 자체가 sessionExcludedIds를 이미 제외했지만 명시적으로 재확인), 메뉴 중복 규칙 통과(=pool이 이미 보장)
     const explorePool = pool
-      .filter(c=> c.score.trustFinal>=EXPLORATION_WEIGHTS.qualityFloor && c.score.trustFinal<EXPLORATION_CONFIG.stableTrustThreshold)
+      .filter(c=> !c.score.trust.stableEligible && c.score.trustFinal>=EXPLORATION_WEIGHTS.qualityFloor)
       .filter(c=> !recommendationHistoryIds.has(c.r.id))
       .filter(c=> !sessionExcludedIds.has(c.r.id))
       .map(c=>({...c, exploration:calculateExplorationScore(c.r, c.score.total, menuHistory)}))
@@ -758,10 +751,14 @@ function parkingLabel(p){ return p.ownParking ? '자체 주차장 있음' : p.ne
 
 function buildReason(r, score, weather, mode){
   const parts = [];
-  parts.push(`차량 기준 약 ${r.travelTime}분 거리(${r.distance}km)입니다.`);
+  parts.push(`현재 위치에서 차량 기준 약 ${r.travelTime}분 거리(${r.distance}km)로 계산했어요. 실제 도로 경로가 아닌 거리 기반 예상치예요.`);
   const ratingText = Number.isFinite(r.rating) ? r.rating.toFixed(1) : '미확인';
   const reviewText = Number.isFinite(r.reviewCount) ? `${r.reviewCount.toLocaleString()}건` : '미확인';
-  parts.push(`평점 ${ratingText} · 리뷰 ${reviewText}으로 현재 확인 가능한 정보 기준 신뢰도를 반영했어요.`);
+  if(score.trust.dataSufficient){
+    parts.push(`평점 ${ratingText} · 리뷰 ${reviewText} 등 확인 가능한 신뢰도 정보를 반영했어요.`);
+  }else{
+    parts.push('카카오 Local에서 평점·리뷰 등의 검증 정보가 제공되지 않아 안정형으로 분류하지 않았어요.');
+  }
   if(score.weatherFit.reason==='cold') parts.push('쌀쌀한 날씨라 따뜻한 메뉴에 가산점을 줬어요.');
   if(score.weatherFit.reason==='hot') parts.push('더운 날이라 시원한 메뉴에 가산점을 줬어요.');
   if(weather.isRainOrSnow) parts.push('비/눈 예보라 이동시간이 짧은 곳을 더 우선했어요.');
@@ -769,6 +766,7 @@ function buildReason(r, score, weather, mode){
   if(score.menuRepeat.reason==='group') parts.push('최근 드신 메뉴와 계열이 비슷해 약간 감점했지만 후보에는 남겼어요.');
   else parts.push(`최근 ${MENU_REPEAT_CONFIG.avoidanceDays}일 내 드신 메뉴와는 겹치지 않아요.`);
   if(mode==='new') parts.push('오늘은 탐색 슬롯이라 아직 추천한 적 없는 곳으로 골랐어요.');
+  if(mode==='limited') parts.push('현재는 확인 가능한 데이터가 적어 거리·날씨·메뉴 중복 등을 중심으로 골랐어요.');
   if(r.isOpen==='UNKNOWN' || r.lunchAvailable==='unknown') parts.push('영업 정보가 확인되지 않아 약간의 감점은 반영했습니다.');
   return parts.join(' ');
 }
@@ -803,7 +801,7 @@ function renderResults(){
     const r = p.r, score = p.score;
     return `
     <div class="result-card">
-      <div class="r-top"><span class="r-name">${r.name}<span class="mode-badge ${p.mode==='new'?'new':'stable'}">${p.mode==='new'?'신규 발굴':'안정형'}</span></span><span class="r-eta">${TRAVEL_MODES[state.settings.mode].label} 약 ${r.travelTime}분</span></div>
+      <div class="r-top"><span class="r-name">${r.name}<span class="mode-badge ${p.mode==='new'?'new':p.mode==='limited'?'limited':'stable'}">${p.mode==='new'?'신규 발굴':p.mode==='limited'?'정보 부족 · 거리 우선':'안정형'}</span></span><span class="r-eta">${TRAVEL_MODES[state.settings.mode].label} 예상 ${r.travelTime}분</span></div>
       <div class="r-category">${r.category} · ${r.foodType}</div>
       <div class="r-address">${r.address}</div>
       <div class="r-ratings">
@@ -814,6 +812,7 @@ function renderResults(){
         ${r.lunchAvailable==='unknown' ? '<span class="badge warn">점심영업 미확인</span>' : ''}
       </div>
       <div class="r-reason">${buildReason(r, score, state.weather, p.mode)}</div>
+      ${p.mode==='limited' ? '<div class="confidence-note"><b>왜 정보 부족으로 표시됐나요?</b><br>현재 카카오 Local API에서는 이 식당의 평점·리뷰·가격·주차·영업시간 같은 검증 정보가 제공되지 않아요. 그래서 가까운 것만으로 ‘안정형’이라고 판단하지 않았어요.</div>' : ''}
       ${renderDebug(r, score, p)}
       <div class="r-links">
         <a class="icon-link ${r.placeUrl?'':'disabled'}" href="${mapLink(r)}" target="_blank" rel="noopener">🗺️ 카카오맵에서 보기</a>
